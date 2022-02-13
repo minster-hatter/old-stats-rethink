@@ -17,7 +17,7 @@ N = 9
 W_OBSERVED = 6
 
 # Binomial model for water vs. land being observed.
-with Model() as m:
+with Model() as m_2_6:
     """W ~ Binomial(N, p)
     p ~ Uniform(0, 1)
     """
@@ -30,7 +30,7 @@ with Model() as m:
     trace = sample(draws=SAMPLES, chains=CHAINS)
     post_pc = sample_posterior_predictive(trace)
     idata = from_pymc3(
-        trace, prior=prior_pc, posterior_predictive=post_pc, model=m
+        trace, prior=prior_pc, posterior_predictive=post_pc, model=m_2_6
     )
 
 # Output summary and plots.

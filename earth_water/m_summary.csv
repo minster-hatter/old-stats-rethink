@@ -1,0 +1,2 @@
+,mean,sd,hdi_5%,hdi_95%,mcse_mean,mcse_sd,ess_mean,ess_sd,ess_bulk,ess_tail,r_hat,median
+p,0.63,0.138,0.408,0.859,0.003,0.002,2115.0,2057.0,2113.0,3608.0,1.0,0.637
