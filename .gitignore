@@ -129,5 +129,5 @@ dmypy.json
 .pyre/
 
 # Project-specific files.
-.csv
-.png
+*.csv
+*.png
