@@ -1,7 +1,6 @@
 # Project-specific files.
 *.csv
 *.png
-data/
 *.db
 
 # Byte-compiled / optimized / DLL files
