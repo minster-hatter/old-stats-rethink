@@ -5,16 +5,19 @@ from pymc3 import (
     sample_prior_predictive,
     sample,
     sample_posterior_predictive,
+    model_to_graphviz,
 )
-from arviz import from_pymc3, summary, plot_ppc
+from arviz import from_pymc3, summary, plot_ppc, plot_trace, plot_posterior
 from matplotlib.pyplot import savefig
 from numpy import median
 
 # Constants.
-SAMPLES = int(1e3)
-CHAINS = 5
 N = 9
 W_OBSERVED = 6
+SAMPLES = int(1e3)
+CHAINS = 5
+PREDICTIVE_SAMPLES = int(1e2)
+CI = 0.9
 
 # Binomial model for water vs. land being observed.
 with Model() as m_2_6:
@@ -34,8 +37,18 @@ with Model() as m_2_6:
     )
 
 # Output summary and plots.
-summary(idata, hdi_prob=0.9, stat_funcs=[median]).to_csv("m_2_6_summary.csv")
-plot_ppc(idata, mean=False, group="prior")
-savefig("m_2_6_prior.png")
-plot_ppc(idata, mean=False)
-savefig("m_2_6_posterior.png")
+summary(idata, hdi_prob=CI, stat_funcs=[median]).to_csv("m_2_6_summary.csv")
+
+plot_ppc(idata, num_pp_samples=PREDICTIVE_SAMPLES, mean=False, group="prior")
+savefig("m_2_6_prior_pc.png")
+
+plot_ppc(idata, num_pp_samples=PREDICTIVE_SAMPLES, mean=False)
+savefig("m_2_6_posterior_pc.png")
+
+plot_trace(idata, compact=True)
+savefig("m_2_6_traces.png")
+
+plot_posterior(idata, var_names=["p"], hdi_prob=CI, point_estimate="median")
+savefig("m_2_6_posterior_p.png")
+
+model_to_graphviz(m_2_6).render("m_2_6_dag", cleanup=True, format="png")
