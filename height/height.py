@@ -2,8 +2,23 @@ from pathlib import Path
 from sqlite3 import connect
 
 from pandas import read_sql
-from pymc3 import Model, Normal, Uniform, sample_prior_predictive, sample, sample_posterior_predictive
-froma arviz import from_pymc3, summary, plot_ppc
+from pymc3 import (
+    Model,
+    Normal,
+    Uniform,
+    sample_prior_predictive,
+    sample,
+    sample_posterior_predictive,
+    model_to_graphviz,
+)
+from arviz import from_pymc3, summary, plot_ppc
+from numpy import median
+from matplotlib.pyplot import savefig
+
+# Constants used later.
+SAMPLES = int(1e3)
+CHAINS = 5
+CI = 0.9
 
 # Add database location to the path and import.
 data_path = Path(__file__).parent / "../data/stats_rethink.db"
@@ -19,4 +34,24 @@ with Model() as m_4_1:
     mu ~ Normal(178, 20)
     sigma ~ Uniform(0, 50)
     """
-    None
+    # Priors.
+    mu = Normal("mu", 178, 20)
+    sigma = Uniform("sigma", 0, 50)
+    # Likelihood.
+    h_i = Normal("h_i", mu, sigma, observed=adults_data["height"])
+    # Predictive checks and sampling.
+    prior_pc = sample_prior_predictive()
+    trace = sample(SAMPLES, chains=CHAINS)
+    post_pc = sample_posterior_predictive(trace)
+    idata_m_4_1 = from_pymc3(
+        trace, prior=prior_pc, posterior_predictive=post_pc, model=m_4_1
+    )
+
+# Summary and plots for model m_4_1.
+summary(idata_m_4_1, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_4_1_summary.csv"
+)
+plot_ppc(idata_m_4_1, mean=False, group="prior")
+savefig("m_4_1_prior_pc.png")
+plot_ppc(idata_m_4_1, mean=False)
+savefig("m_4_1_posterior_pc.png")
