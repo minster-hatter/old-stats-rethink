@@ -34,8 +34,8 @@ with Model() as m_2_6:
     )
 
 # Output summary and plots.
-summary(idata, hdi_prob=0.9, stat_funcs=[median]).to_csv("m_summary.csv")
+summary(idata, hdi_prob=0.9, stat_funcs=[median]).to_csv("m_2_6_summary.csv")
 plot_ppc(idata, mean=False, group="prior")
-savefig("m_prior.png")
+savefig("m_2_6_prior.png")
 plot_ppc(idata, mean=False)
-savefig("m_posterior.png")
+savefig("m_2_6_posterior.png")
