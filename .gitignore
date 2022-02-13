@@ -1,3 +1,9 @@
+# Project-specific files.
+*.csv
+*.png
+data/
+*.db
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -127,8 +133,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-# Project-specific files.
-*.csv
-*.png
-data/
