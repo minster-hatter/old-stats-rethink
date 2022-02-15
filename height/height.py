@@ -22,7 +22,7 @@ from arviz import (
 from numpy import median
 from matplotlib.pyplot import savefig
 
-# Constants used later.
+# Constants to be used later.
 SAMPLES = int(1e3)
 CHAINS = 5
 PREDICTIVE_SAMPLES = int(1e2)
@@ -129,3 +129,44 @@ plot_posterior(
     idata_m_4_2, var_names=["mu", "sigma"], hdi_prob=CI, point_estimate="median"
 )
 savefig("m_4_2_posterior_mu_sigma.png")
+
+# New model with weight as a linear predictor.
+W = adults_data["weight"] - adults_data["weight"].mean()
+
+with Model() as m_4_3_trial:
+    """h_i ~ Normal(mu_i, sigma)
+    mu_i = alpha + beta * (x_i - x_bar)
+    alpha ~ Normal(178, 20)
+    beta ~ Normal(0, 10)
+    sigma ~ Uniform(0, 50)
+    """
+    # Priors.
+    alpha = Normal("alpha", 178, 20)
+    beta = Normal("beta", 0, 10)
+    sigma = Uniform("sigma", 0, 50)
+    # Likelihood.
+    mu_i = alpha + beta * W
+    h_i = Normal("h_i", mu_i, sigma, observed=adults_data["height"])
+    # Prior predictive check.
+    prior_pc_m_4_3_trial = sample_prior_predictive()
+    idata_m_4_3_trial = from_pymc3(
+        prior=prior_pc_m_4_3_trial, model=m_4_3_trial
+    )
+
+plot_ppc(
+    idata_m_4_3_trial,
+    num_pp_samples=PREDICTIVE_SAMPLES,
+    mean=False,
+    group="prior",
+)
+savefig("m_4_3_trial_prior_pc.png")
+
+# A new model is created with more sensible prior h_i predictions.
+with Model() as m_4_3:
+    """h_i ~ Normal(mu_i, sigma)
+    mu_i = alpha + beta * (x_i - x_bar)
+    alpha ~ Normal(178, 20)
+    beta ~ Normal(0, 1)  # Note that this is now 1, not 10.
+    sigma ~ Uniform(0, 50)
+    """
+    None
