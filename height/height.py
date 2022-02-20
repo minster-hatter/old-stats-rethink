@@ -37,6 +37,9 @@ adults_data = howell_data[howell_data["age"] >= 18]
 # Summarise and explore the data.
 print("Summary of the Howell data for adults:\n", adults_data.describe(), "\n")
 
+# Create feature for later use.
+W = adults_data["weight"] - adults_data["weight"].mean()
+
 # Linear model of adult height.
 with Model() as m_4_1:
     """h_i ~ Normal(mu, sigma)
@@ -130,9 +133,11 @@ plot_posterior(
 )
 savefig("m_4_2_posterior_mu_sigma.png")
 
-# New model with weight as a linear predictor.
-W = adults_data["weight"] - adults_data["weight"].mean()
+plot_pair(idata_m_4_2, var_names=["mu", "sigma"], kind="kde")
+savefig("m_4_2_pairplot_mu_sigma.png")
 
+
+# New model with weight as a linear predictor.
 with Model() as m_4_3_trial:
     """h_i ~ Normal(mu_i, sigma)
     mu_i = alpha + beta * (x_i - x_bar)
@@ -141,9 +146,9 @@ with Model() as m_4_3_trial:
     sigma ~ Uniform(0, 50)
     """
     # Priors.
-    alpha = Normal("alpha", 178, 20)
-    beta = Normal("beta", 0, 10)
-    sigma = Uniform("sigma", 0, 50)
+    alpha = Normal("alpha", 178.0, 20.0)
+    beta = Normal("beta", 0.0, 10.0)
+    sigma = Uniform("sigma", 0.0, 50.0)
     # Likelihood.
     mu_i = alpha + beta * W
     h_i = Normal("h_i", mu_i, sigma, observed=adults_data["height"])
@@ -153,6 +158,7 @@ with Model() as m_4_3_trial:
         prior=prior_pc_m_4_3_trial, model=m_4_3_trial
     )
 
+# Check if the prior assumptions make sense.
 plot_ppc(
     idata_m_4_3_trial,
     num_pp_samples=PREDICTIVE_SAMPLES,
@@ -169,4 +175,57 @@ with Model() as m_4_3:
     beta ~ Normal(0, 1)  # Note that this is now 1, not 10.
     sigma ~ Uniform(0, 50)
     """
-    None
+    # Priors.
+    alpha = Normal("alpha", 178.0, 20.0)
+    beta = Normal("beta", 0.0, 1.0)
+    sigma = Uniform("sigma", 0.0, 50.0)
+    # Likelihood.
+    mu = alpha + beta * W
+    h_i = Normal("h_i", mu, sigma, observed=adults_data["height"])
+    # Prior predictive check.
+    prior_pc_m_4_3 = sample_prior_predictive()
+    idata_m_4_3_trial = from_pymc3(prior=prior_pc_m_4_3, model=m_4_3)
+
+# Find that the new prior assumptions are more sensible.
+plot_ppc(
+    idata_m_4_3_trial,
+    num_pp_samples=PREDICTIVE_SAMPLES,
+    mean=False,
+    group="prior",
+)
+savefig("m_4_3_prior_pc.png")
+
+# Fit the model and explore the outputs.
+with m_4_3:
+    # Sampling and predictive checks.
+    trace_m_4_3 = sample(SAMPLES, chains=CHAINS)
+    post_pc_m_4_3 = sample_posterior_predictive(trace_m_4_3)
+    idata_m_4_3 = from_pymc3(
+        trace_m_4_3,
+        prior=prior_pc_m_4_3,
+        posterior_predictive=post_pc_m_4_3,
+        model=m_4_3,
+    )
+
+model_to_graphviz(m_4_3).render("m_4_3_dag", cleanup=True, format="png")
+
+summary(idata_m_4_3, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_4_3_summary.csv"
+)
+
+plot_ppc(
+    idata_m_4_3, num_pp_samples=PREDICTIVE_SAMPLES, mean=False, group="prior"
+)
+savefig("m_4_3_prior_pc.png")
+
+plot_ppc(idata_m_4_3, num_pp_samples=PREDICTIVE_SAMPLES, mean=False)
+savefig("m_4_3_posterior_pc.png")
+
+plot_trace(idata_m_4_3, compact=True)
+savefig("m_4_3_traces.png")
+
+plot_posterior(idata_m_4_3, hdi_prob=CI, point_estimate="median")
+savefig("m_3_2_posteriors.png")
+
+plot_pair(idata_m_4_3, kind="kde")
+savefig("m_4_3_pairplots.png")
