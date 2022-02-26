@@ -18,9 +18,12 @@ from arviz import (
     plot_trace,
     plot_posterior,
     plot_pair,
+    hdi,
+    plot_hdi,
 )
-from numpy import median
-from matplotlib.pyplot import savefig
+from numpy import median, arange
+from numpy.random import randint
+from matplotlib.pyplot import savefig, subplots, scatter, xlabel, ylabel
 
 # Constants to be used later.
 SAMPLES = int(1e3)
@@ -225,7 +228,26 @@ plot_trace(idata_m_4_3, compact=True)
 savefig("m_4_3_traces.png")
 
 plot_posterior(idata_m_4_3, hdi_prob=CI, point_estimate="median")
-savefig("m_3_2_posteriors.png")
+savefig("m_4_3_posteriors.png")
 
 plot_pair(idata_m_4_3, kind="kde")
 savefig("m_4_3_pairplots.png")
+
+# Plot credible models for the average relationship.
+random_indices = randint(len(trace_m_4_3), size=20)
+fig, ax = subplots(1, 1)
+ax.scatter(
+    adults_data["weight"], adults_data["height"], color="black", marker="x"
+)
+for index in random_indices:
+    ax.plot(
+        adults_data["weight"],
+        trace_m_4_3["alpha"][index]
+        + trace_m_4_3["beta"][index]
+        * (adults_data["weight"] - adults_data["weight"].mean()),
+        "orangered",
+        alpha=0.2,
+    )
+ax.set_xlabel("weight (kg)")
+ax.set_ylabel("height (cm)")
+savefig("m_4_3_model_plot.png")
