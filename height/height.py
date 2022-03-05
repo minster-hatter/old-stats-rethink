@@ -1,7 +1,7 @@
 from pathlib import Path
 from sqlite3 import connect
 
-from pandas import read_sql
+from pandas import read_sql, DataFrame
 from pymc3 import (
     Model,
     Normal,
@@ -21,7 +21,7 @@ from arviz import (
     hdi,
     plot_hdi,
 )
-from numpy import median, arange
+from numpy import median, arange, linspace
 from numpy.random import randint
 from matplotlib.pyplot import savefig, subplots, scatter, xlabel, ylabel
 
@@ -251,3 +251,28 @@ for index in random_indices:
 ax.set_xlabel("weight (kg)")
 ax.set_ylabel("height (cm)")
 savefig("m_4_3_model_plot.png")
+
+# Plot ordered height with model estimates.
+m_4_3_ppc_df = DataFrame(post_pc_m_4_3["h_i"])
+m_4_3_ppc_df = m_4_3_ppc_df.reindex(
+    m_4_3_ppc_df.median().sort_values().index, axis=1
+)
+ordered_values = [name for name in m_4_3_ppc_df.columns]
+hs = list(adults_data["height"])
+ordered_heights = [hs[i] for i in ordered_values]
+xs = linspace(0, m_4_3_ppc_df.shape[1] - 1, m_4_3_ppc_df.shape[1])
+fig, ax = subplots(1, 1)
+ax.errorbar(
+    xs,
+    m_4_3_ppc_df.median(),
+    [
+        m_4_3_ppc_df.median() - m_4_3_ppc_df.quantile(0.05),
+        m_4_3_ppc_df.quantile(0.95) - m_4_3_ppc_df.median(),
+    ],
+    color="orangered",
+    alpha=0.1,
+)
+ax.scatter(xs, ordered_heights, marker="x", color="black")
+ax.set_xlabel("weight (kg)")
+ax.set_ylabel("height (cm)")
+savefig("m_4_3_prediction_error.png")
