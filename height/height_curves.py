@@ -5,10 +5,12 @@ from sqlite3 import connect
 from pandas import read_sql
 from pymc3 import Model, Normal, Lognormal, Uniform, sample, model_to_graphviz
 from arviz import from_pymc3, summary
-from numpy import median, vstack
+from numpy import median, vstack, linspace
+from numpy.random import randint
+from matplotlib.pyplot import subplots, xlabel, ylabel, savefig
 
 # Constants to be used later.
-SAMPLES = int(1e3)
+SAMPLES = int(1e2)
 CHAINS = 5
 PREDICTIVE_SAMPLES = int(1e2)
 CI = 0.9
@@ -117,3 +119,43 @@ model_to_graphviz(m_4_6).render("m_4_6_dag", cleanup=True, format="png")
 summary(idata_m_4_6, hdi_prob=CI, stat_funcs=[median]).to_csv(
     "m_4_6_summary.csv"
 )
+
+# Plot the models against the data.
+random_indices = randint(len(trace_m_4_4), size=25)
+XS = linspace(-3, 3, len(howell_data))
+fig, ax = subplots(3, 1, sharex=True)
+ax[0].scatter(howell_data["s_weight"], howell_data["height"], marker="x", color="black")
+for index in random_indices:
+    ax[0].plot(
+        XS,
+        trace_m_4_4["alpha"][index]
+        + trace_m_4_4["beta"][index] * XS,
+        "orangered",
+        alpha=0.1,
+    )
+ax[0].set_ylabel("Height (cm)")
+ax[1].scatter(howell_data["s_weight"], howell_data["height"], marker="x", color="black")
+ax[1].set_ylabel("Height (cm)")
+for index in random_indices:
+    ax[1].plot(
+        XS,
+        trace_m_4_5["alpha"][index]
+        + trace_m_4_5["beta_1"][index] * XS
+        + trace_m_4_5["beta_2"][index] * XS**2,
+        "orangered",
+        alpha=0.1,
+    )
+ax[2].scatter(howell_data["s_weight"], howell_data["height"], marker="x", color="black")
+for index in random_indices:
+    ax[2].plot(
+        XS,
+        trace_m_4_6["alpha"][index]
+        + trace_m_4_6["beta_1"][index] * XS
+        + trace_m_4_6["beta_2"][index] * XS**2 
+        + trace_m_4_6["beta_3"][index]* XS**3,
+        "orangered",
+        alpha=0.1,
+    )
+ax[2].set_ylabel("Height (cm)")
+xlabel("Weight (standardized)")
+savefig("models_4_4_to_6_models.png")
