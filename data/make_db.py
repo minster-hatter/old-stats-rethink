@@ -6,8 +6,10 @@ cnxn = connect("stats_rethink.db")
 
 #howell = read_csv("Howell1.csv", delimiter=";")
 #print(howell)
-#howell.to_sql("howell1", cnxn, if_exists= "fail", index=False)
+#howell.to_sql("howell1", cnxn, if_exists="fail", index=False)
 
+#cherry_blossom = read_csv("cherry_blossoms.csv")
+#cherry_blossom.to_sql("kyoto", cnxn, if_exists="fail", index=False)
 
 # Not quite correct.
 #files = glob("*.csv")
