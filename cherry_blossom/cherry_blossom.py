@@ -1,7 +1,7 @@
 from pathlib import Path
 from sqlite3 import connect
 
-from numpy import linspace, quantile, asarray
+from numpy import linspace, quantile, asarray, median, percentile
 from pandas import read_sql
 from patsy import dmatrix
 from matplotlib.pyplot import subplots, savefig
@@ -13,12 +13,13 @@ from pymc3 import (
     sample_prior_predictive,
     sample,
     sample_posterior_predictive,
+    model_to_graphviz,
 )
 from pymc3.math import dot
-from arviz import from_pymc3, summary
+from arviz import from_pymc3, summary, plot_ppc, plot_trace, plot_posterior
 
 # Constants to be used later.
-SAMPLES = int(1e2)
+SAMPLES = int(1e3)
 CHAINS = 5
 PREDICTIVE_SAMPLES = int(1e2)
 CI = 0.9
@@ -72,3 +73,51 @@ with Model() as m_4_7:
         posterior_predictive=post_pc_m_4_7,
         model=m_4_7,
     )
+
+model_to_graphviz(m_4_7).render("m_4_7_dag", cleanup=True, format="png")
+
+summary(idata_m_4_7, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_4_7_summary.csv"
+)
+
+plot_ppc(
+    idata_m_4_7, num_pp_samples=PREDICTIVE_SAMPLES, mean=False, group="prior"
+)
+savefig("m_4_7_prior_pc.png")
+
+plot_ppc(idata_m_4_7, num_pp_samples=PREDICTIVE_SAMPLES, mean=False)
+savefig("m_4_7_posterior_pc.png")
+
+plot_trace(idata_m_4_7, compact=True, var_names=["alpha", "w", "sigma"])
+savefig("m_4_7_traces.png")
+
+plot_posterior(
+    idata_m_4_7,
+    hdi_prob=CI,
+    var_names=["alpha", "w", "sigma"],
+    kind="hist",
+    color=CHERRY_BLOSSOM_PINK,
+)
+savefig("m_4_7_posterior_hisograms")
+
+fig, ax = subplots(3, 1)
+for i in range(N_KNOTS + 2):
+    ax[0].plot(blossom_data["year"], (B[:, i]), color="black")
+ax[0].set_ylabel("Basis", fontsize=FS)
+wp = trace_m_4_7[w].mean(0)
+for i in range(N_KNOTS + 2):
+    ax[1].plot(blossom_data["year"], (wp[i] * B[:, i]), color="black")
+ax[1].set_xlim(812, 2015)
+ax[1].set_ylim(-6, 6)
+ax[1].set_xlabel("Year", fontsize=FS)
+ax[1].set_ylabel("Basis", fontsize=FS)
+low, high = percentile(post_pc_m_4_7["D"], [10, 90], axis=0)
+ax[2].plot(blossom_data["year"], blossom_data["doy"], "x", color="black")
+ax[2].fill_between(
+    blossom_data["year"], low, high, alpha=0.25, color=CHERRY_BLOSSOM_PINK
+)
+ax[2].plot(
+    blossom_data["year"], post_pc_m_4_7["D"].mean(axis=0), color=CHERRY_BLOSSOM_PINK
+)
+ax[2].set_xlabel("Year", fontsize=FS)
+ax[2].set_ylabel("Day of Year", fontsize=FS)
