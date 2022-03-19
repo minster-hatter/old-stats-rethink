@@ -43,7 +43,7 @@ print("Summary of the Howell data for adults:\n", adults_data.describe(), "\n")
 # Create feature for later use.
 W = adults_data["weight"] - adults_data["weight"].mean()
 
-# Linear model of adult height.
+# Linear model of adult height. Note imputations of missing data.
 with Model() as m_4_1:
     """h_i ~ Normal(mu, sigma)
     mu ~ Normal(178, 20)
