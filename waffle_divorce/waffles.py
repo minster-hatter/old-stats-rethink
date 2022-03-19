@@ -2,7 +2,19 @@ from pathlib import Path
 from sqlite3 import connect
 
 from pandas import read_sql
-from scikitlearn.preprocessing import scale
+from sklearn.preprocessing import scale
+from pymc3 import (
+    Model,
+    Normal,
+    Exponential,
+    sample_prior_predictive,
+    model_to_graphviz,
+    sample,
+    sample_posterior_predictive,
+)
+from arviz import from_pymc3, plot_ppc, summary, plot_trace, plot_posterior, plot_pair
+from matplotlib.pyplot import savefig
+from numpy import median
 
 # Constants to be used later.
 SAMPLES = int(1e3)
@@ -20,3 +32,122 @@ print(waffles_data.describe())
 # Standardize the divorce and median age at marriage fields.
 waffles_data["D"] = scale(waffles_data["Divorce"])
 waffles_data["A"] = scale(waffles_data["MedianAgeMarriage"])
+waffles_data["M"] = scale(waffles_data["Marriage"])
+
+# Model A as a linear predictor of D.
+with Model() as m_5_1:
+    """D_i ~ Normal(mu_i, sigma)
+    mu_i = alpha + beta_A * A_i
+    alpha ~ Normal(0, 0.2)
+    beta_A ~ Normal(0, 0.5)
+    sigma ~ Exponential(1)
+    """
+    # Priors.
+    alpha = Normal("alpha", 0.0, 0.2)
+    beta_A = Normal("beta_A", 0.0, 0.5)
+    sigma = Exponential("sigma", 1.0)
+    # Likelihood.
+    mu_i = alpha + beta_A * waffles_data["A"]
+    D_i = Normal("D_i", mu_i, sigma, observed=waffles_data["D"])
+    # Prior check.
+    prior_pc_m_5_1 = sample_prior_predictive()
+    idata_m_5_1 = from_pymc3(prior=prior_pc_m_5_1, model=m_5_1)
+
+model_to_graphviz(m_5_1).render("m_5_1_dag", cleanup=True, format="png")
+
+plot_ppc(
+    idata_m_5_1,
+    num_pp_samples=PREDICTIVE_SAMPLES,
+    mean=False,
+    group="prior",
+    kind="cumulative",
+)
+savefig("m_5_1_prior_pc.png")
+
+with m_5_1:
+    trace_m_5_1 = sample(SAMPLES, chains=CHAINS)
+    post_pc_m_5_1 = sample_posterior_predictive(trace_m_5_1)
+    idata_m_5_1 = from_pymc3(
+        trace_m_5_1,
+        prior=prior_pc_m_5_1,
+        posterior_predictive=post_pc_m_5_1,
+        model=m_5_1,
+    )
+
+summary(idata_m_5_1, hdi_prob=CI, stat_funcs=[median]).to_csv("m_5_1_summary.csv")
+
+plot_ppc(idata_m_5_1, num_pp_samples=PREDICTIVE_SAMPLES, mean=False, kind="cumulative")
+savefig("m_5_1_posterior_pc.png")
+
+plot_trace(idata_m_5_1, compact=True, var_names=["alpha", "beta_A", "sigma"])
+savefig("m_5_1_traces.png")
+
+plot_posterior(
+    idata_m_5_1,
+    hdi_prob=CI,
+    var_names=["alpha", "beta_A", "sigma"],
+    kind="hist",
+    color="orangered",
+    point_estimate="median",
+)
+savefig("m_5_1_posterior_hisograms")
+
+plot_pair(idata_m_5_1, var_names=["alpha", "beta_A"], kind="kde")
+savefig("m_5_1_pairplot_alpha_beta_A.png")
+
+# Model M as a linear predictor of D.
+with Model() as m_5_2:
+    """D_i ~ Normal(mu_i, sigma)
+    mu_i = alpha + beta_M * M_i
+    alpha ~ Normal(0, 0.2)
+    beta_M ~ Normal(0, 0.5)
+    sigma ~ Exponential(1)
+    """
+    # Priors.
+    alpha = Normal("alpha", 0.0, 0.2)
+    beta_M = Normal("beta_M", 0.0, 0.5)
+    sigma = Exponential("sigma", 1.0)
+    # Likelihood.
+    mu_i = alpha + beta_M * waffles_data["M"]
+    D_i = Normal("D_i", mu_i, sigma, observed=waffles_data["D"])
+    # Sampling.
+    prior_pc_m_5_2 = sample_prior_predictive()
+    trace_m_5_2 = sample(SAMPLES, chains=CHAINS)
+    post_pc_m_5_2 = sample_posterior_predictive(trace_m_5_2)
+    idata_m_5_2 = from_pymc3(
+        trace_m_5_2,
+        prior=prior_pc_m_5_2,
+        posterior_predictive=post_pc_m_5_2,
+        model=m_5_2,
+    )
+model_to_graphviz(m_5_2).render("m_5_2_dag", cleanup=True, format="png")
+
+plot_ppc(
+    idata_m_5_2,
+    num_pp_samples=PREDICTIVE_SAMPLES,
+    mean=False,
+    group="prior",
+    kind="cumulative",
+)
+savefig("m_5_2_prior_pc.png")
+
+summary(idata_m_5_2, hdi_prob=CI, stat_funcs=[median]).to_csv("m_5_2_summary.csv")
+
+plot_ppc(idata_m_5_2, num_pp_samples=PREDICTIVE_SAMPLES, mean=False, kind="cumulative")
+savefig("m_5_2_posterior_pc.png")
+
+plot_trace(idata_m_5_2, compact=True, var_names=["alpha", "beta_M", "sigma"])
+savefig("m_5_2_traces.png")
+
+plot_posterior(
+    idata_m_5_2,
+    hdi_prob=CI,
+    var_names=["alpha", "beta_M", "sigma"],
+    kind="hist",
+    color="orangered",
+    point_estimate="median",
+)
+savefig("m_5_2_posterior_hisograms")
+
+plot_pair(idata_m_5_2, var_names=["alpha", "beta_M"], kind="kde")
+savefig("m_5_2_pairplot_alpha_beta_M.png")
