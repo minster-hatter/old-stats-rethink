@@ -198,3 +198,71 @@ with open("conditional_independencies.txt", "w") as output:
     output.write(
         f"DAG_1 conditional independencies:\n{dag_1.get_independencies()}"
     )
+
+# Multiple regression model to test DAG implications.
+with Model() as m_5_3:
+    """D_i ~ Normal(mu_i, sigma)
+    mu_i = alpha + beta_M * M_i + beta_A * A_i
+    alpha ~ Normal(0, 0.2)
+    beta_M ~ Normal(0, 0,5)
+    beta_A ~ Normal(0, 0,5)
+    sigma ~ Exponential(1)
+    """
+    # Priors.
+    alpha = Normal("alpha", 0.0, 0.2)
+    beta_M = Normal("beta_M", 0.0, 0.5)
+    beta_A = Normal("beta_A", 0.0, 0.5)
+    sigma = Exponential("sigma", 1.0)
+    # Likelihood.
+    mu_i = alpha + beta_M * waffles_data["M"] + beta_A * waffles_data["A"]
+    D_i = Normal("D_i", mu_i, sigma, observed=waffles_data["D"])
+    # Sampling.
+    prior_pc_m_5_3 = sample_prior_predictive()
+    trace_m_5_3 = sample(SAMPLES, chains=CHAINS)
+    post_pc_m_5_3 = sample_posterior_predictive(trace_m_5_3)
+    idata_m_5_3 = from_pymc3(
+        trace_m_5_3,
+        prior=prior_pc_m_5_3,
+        posterior_predictive=post_pc_m_5_3,
+        model=m_5_3,
+    )
+model_to_graphviz(m_5_3).render("m_5_3_dag", cleanup=True, format="png")
+
+plot_ppc(
+    idata_m_5_3,
+    num_pp_samples=PREDICTIVE_SAMPLES,
+    mean=False,
+    group="prior",
+    kind="cumulative",
+)
+savefig("m_5_3_prior_pc.png")
+
+summary(idata_m_5_3, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_5_3_summary.csv"
+)
+
+plot_ppc(
+    idata_m_5_3,
+    num_pp_samples=PREDICTIVE_SAMPLES,
+    mean=False,
+    kind="cumulative",
+)
+savefig("m_5_3_posterior_pc.png")
+
+plot_trace(
+    idata_m_5_3, compact=True, var_names=["alpha", "beta_M", "beta_A", "sigma"]
+)
+savefig("m_5_3_traces.png")
+
+plot_posterior(
+    idata_m_5_3,
+    hdi_prob=CI,
+    var_names=["alpha", "beta_M", "beta_A", "sigma"],
+    kind="hist",
+    color="orangered",
+    point_estimate="median",
+)
+savefig("m_5_3_posterior_hisograms")
+
+plot_pair(idata_m_5_3, var_names=["alpha", "beta_M", "beta_A"], kind="kde")
+savefig("m_5_3_pairplot_alpha_beta_M_beta_A.png")

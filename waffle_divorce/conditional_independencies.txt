@@ -1,5 +1,5 @@
 DAG_0 conditional independencies:
 
 DAG_1 conditional independencies:
-(D ⟂ M | A)
 (M ⟂ D | A)
+(D ⟂ M | A)
