@@ -191,5 +191,10 @@ dag_1_plot.render()
 dag_1_plot.savefig("waffles_dag_1.png")
 
 # Identift conditional independencies in DAGs.
-print(f"DAG_0 conditional independencies:\n{dag_0.get_independencies()}")
-print(f"DAG_1 conditional independencies:\n{dag_1.get_independencies()}")
+with open("conditional_independencies.txt", "w") as output:
+    output.write(
+        f"DAG_0 conditional independencies:\n{dag_0.get_independencies()}\n"
+    )
+    output.write(
+        f"DAG_1 conditional independencies:\n{dag_1.get_independencies()}"
+    )
