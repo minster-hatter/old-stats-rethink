@@ -12,9 +12,17 @@ from pymc3 import (
     sample,
     sample_posterior_predictive,
 )
-from arviz import from_pymc3, plot_ppc, summary, plot_trace, plot_posterior, plot_pair
+from arviz import (
+    from_pymc3,
+    plot_ppc,
+    summary,
+    plot_trace,
+    plot_posterior,
+    plot_pair,
+)
 from matplotlib.pyplot import savefig
 from numpy import median
+from pgmpy.base import DAG
 
 # Constants to be used later.
 SAMPLES = int(1e3)
@@ -74,9 +82,16 @@ with m_5_1:
         model=m_5_1,
     )
 
-summary(idata_m_5_1, hdi_prob=CI, stat_funcs=[median]).to_csv("m_5_1_summary.csv")
+summary(idata_m_5_1, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_5_1_summary.csv"
+)
 
-plot_ppc(idata_m_5_1, num_pp_samples=PREDICTIVE_SAMPLES, mean=False, kind="cumulative")
+plot_ppc(
+    idata_m_5_1,
+    num_pp_samples=PREDICTIVE_SAMPLES,
+    mean=False,
+    kind="cumulative",
+)
 savefig("m_5_1_posterior_pc.png")
 
 plot_trace(idata_m_5_1, compact=True, var_names=["alpha", "beta_A", "sigma"])
@@ -131,9 +146,16 @@ plot_ppc(
 )
 savefig("m_5_2_prior_pc.png")
 
-summary(idata_m_5_2, hdi_prob=CI, stat_funcs=[median]).to_csv("m_5_2_summary.csv")
+summary(idata_m_5_2, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_5_2_summary.csv"
+)
 
-plot_ppc(idata_m_5_2, num_pp_samples=PREDICTIVE_SAMPLES, mean=False, kind="cumulative")
+plot_ppc(
+    idata_m_5_2,
+    num_pp_samples=PREDICTIVE_SAMPLES,
+    mean=False,
+    kind="cumulative",
+)
 savefig("m_5_2_posterior_pc.png")
 
 plot_trace(idata_m_5_2, compact=True, var_names=["alpha", "beta_M", "sigma"])
@@ -151,3 +173,23 @@ savefig("m_5_2_posterior_hisograms")
 
 plot_pair(idata_m_5_2, var_names=["alpha", "beta_M"], kind="kde")
 savefig("m_5_2_pairplot_alpha_beta_M.png")
+
+# Directed acyclic graphs.
+dag_0 = DAG([("A", "M"), ("A", "D"), ("M", "D")])
+dag_0_plot = dag_0.to_daft(
+    node_pos="circular", pgm_params={"observed_style": "inner"}
+)
+dag_0_plot.render()
+dag_0_plot.savefig("waffles_dag_0.png")
+
+
+dag_1 = DAG([("A", "M"), ("A", "D")])
+dag_1_plot = dag_1.to_daft(
+    node_pos="circular", pgm_params={"observed_style": "inner"}
+)
+dag_1_plot.render()
+dag_1_plot.savefig("waffles_dag_1.png")
+
+# Identift conditional independencies in DAGs.
+print(f"DAG_0 conditional independencies:\n{dag_0.get_independencies()}")
+print(f"DAG_1 conditional independencies:\n{dag_1.get_independencies()}")
