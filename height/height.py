@@ -1,4 +1,5 @@
 from pathlib import Path
+from configparser import ConfigParser
 from sqlite3 import connect
 
 from pandas import read_sql, DataFrame
@@ -26,10 +27,12 @@ from numpy.random import randint
 from matplotlib.pyplot import savefig, subplots, scatter, xlabel, ylabel
 
 # Constants to be used later.
-SAMPLES = int(1e3)
-CHAINS = 5
-PREDICTIVE_SAMPLES = int(1e2)
-CI = 0.9
+config = ConfigParser()
+config.read("../config.ini")
+SAMPLES = config.getint("parameters", "SAMPLES")
+CHAINS = config.getint("parameters", "CHAINS")
+PREDICTIVE_SAMPLES = config.getint("parameters", "PREDICTIVE_SAMPLES")
+CI = config.getfloat("parameters", "CREDIBLE_INTERVAL")
 
 # Add database location to the path and import.
 data_path = Path(__file__).parent / "../data/stats_rethink.db"

@@ -1,5 +1,6 @@
 # Polynomials linking height and weight that are later compared.
 from pathlib import Path
+from configparser import ConfigParser
 from sqlite3 import connect
 
 from pandas import read_sql
@@ -10,10 +11,12 @@ from numpy.random import randint
 from matplotlib.pyplot import subplots, xlabel, ylabel, savefig
 
 # Constants to be used later.
-SAMPLES = int(1e2)
-CHAINS = 5
-PREDICTIVE_SAMPLES = int(1e2)
-CI = 0.9
+config = ConfigParser()
+config.read("../config.ini")
+SAMPLES = config.getint("parameters", "SAMPLES")
+CHAINS = config.getint("parameters", "CHAINS")
+PREDICTIVE_SAMPLES = config.getint("parameters", "PREDICTIVE_SAMPLES")
+CI = config.getfloat("parameters", "CREDIBLE_INTERVAL")
 
 # Add database location to the path and import.
 data_path = Path(__file__).parent / "../data/stats_rethink.db"
@@ -124,35 +127,40 @@ summary(idata_m_4_6, hdi_prob=CI, stat_funcs=[median]).to_csv(
 random_indices = randint(len(trace_m_4_4), size=25)
 XS = linspace(-3, 3, len(howell_data))
 fig, ax = subplots(3, 1, sharex=True)
-ax[0].scatter(howell_data["s_weight"], howell_data["height"], marker="x", color="black")
+ax[0].scatter(
+    howell_data["s_weight"], howell_data["height"], marker="x", color="black"
+)
 for index in random_indices:
     ax[0].plot(
         XS,
-        trace_m_4_4["alpha"][index]
-        + trace_m_4_4["beta"][index] * XS,
+        trace_m_4_4["alpha"][index] + trace_m_4_4["beta"][index] * XS,
         "orangered",
         alpha=0.1,
     )
 ax[0].set_ylabel("Height (cm)")
-ax[1].scatter(howell_data["s_weight"], howell_data["height"], marker="x", color="black")
+ax[1].scatter(
+    howell_data["s_weight"], howell_data["height"], marker="x", color="black"
+)
 ax[1].set_ylabel("Height (cm)")
 for index in random_indices:
     ax[1].plot(
         XS,
         trace_m_4_5["alpha"][index]
         + trace_m_4_5["beta_1"][index] * XS
-        + trace_m_4_5["beta_2"][index] * XS**2,
+        + trace_m_4_5["beta_2"][index] * XS ** 2,
         "orangered",
         alpha=0.1,
     )
-ax[2].scatter(howell_data["s_weight"], howell_data["height"], marker="x", color="black")
+ax[2].scatter(
+    howell_data["s_weight"], howell_data["height"], marker="x", color="black"
+)
 for index in random_indices:
     ax[2].plot(
         XS,
         trace_m_4_6["alpha"][index]
         + trace_m_4_6["beta_1"][index] * XS
-        + trace_m_4_6["beta_2"][index] * XS**2 
-        + trace_m_4_6["beta_3"][index]* XS**3,
+        + trace_m_4_6["beta_2"][index] * XS ** 2
+        + trace_m_4_6["beta_3"][index] * XS ** 3,
         "orangered",
         alpha=0.1,
     )

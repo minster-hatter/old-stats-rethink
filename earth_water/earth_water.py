@@ -1,3 +1,5 @@
+from configparser import ConfigParser
+
 from pymc3 import (
     Model,
     Uniform,
@@ -12,12 +14,14 @@ from matplotlib.pyplot import savefig
 from numpy import median
 
 # Constants.
+config = ConfigParser()
+config.read("../config.ini")
+SAMPLES = config.getint("parameters", "SAMPLES")
+CHAINS = config.getint("parameters", "CHAINS")
+PREDICTIVE_SAMPLES = config.getint("parameters", "PREDICTIVE_SAMPLES")
+CI = config.getfloat("parameters", "CREDIBLE_INTERVAL")
 N = 9
 W_OBSERVED = 6
-SAMPLES = int(1e3)
-CHAINS = 5
-PREDICTIVE_SAMPLES = int(1e2)
-CI = 0.9
 
 # Binomial model for water vs. land being observed.
 with Model() as m_2_6:
