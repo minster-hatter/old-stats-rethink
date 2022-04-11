@@ -11,6 +11,9 @@ cnxn = connect("stats_rethink.db")
 #cherry_blossom = read_csv("cherry_blossoms.csv")
 #cherry_blossom.to_sql("kyoto", cnxn, if_exists="fail", index=False)
 
+#waffle_divorce = read_csv("WaffleDivorce.csv", delimiter=";")
+#waffle_divorce.to_sql("waffles", cnxn, if_exists="fail", index=False)
+
 # Not quite correct.
 #files = glob("*.csv")
 #for file in files:
