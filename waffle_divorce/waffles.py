@@ -19,6 +19,7 @@ from arviz import (
     plot_trace,
     plot_posterior,
     plot_pair,
+    plot_forest,
 )
 from matplotlib.pyplot import savefig
 from numpy import median
@@ -266,3 +267,14 @@ savefig("m_5_3_posterior_hisograms")
 
 plot_pair(idata_m_5_3, var_names=["alpha", "beta_M", "beta_A"], kind="kde")
 savefig("m_5_3_pairplot_alpha_beta_M_beta_A.png")
+
+# Compare the model parameters (c.f. DAG conditional indepencies).
+plot_forest(
+    [idata_m_5_1, idata_m_5_2, idata_m_5_3],
+    model_names=["model 5.1", "model 5.2", "model 5.3"],
+    var_names=["beta_A", "beta_M"],
+    combined=True,
+    hdi_prob=CI,
+    colors=["black", "orangered", "cornflowerblue"],
+)
+savefig("forest_plot_beta_A_beta_M.png")
