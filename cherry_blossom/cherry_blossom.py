@@ -1,3 +1,4 @@
+from configparser import ConfigParser
 from pathlib import Path
 from sqlite3 import connect
 
@@ -19,11 +20,13 @@ from pymc3.math import dot
 from arviz import from_pymc3, summary, plot_ppc, plot_trace, plot_posterior
 
 # Constants to be used later.
-SAMPLES = int(1e3)
-CHAINS = 5
-PREDICTIVE_SAMPLES = int(1e2)
-CI = 0.9
-FS = 14
+config = ConfigParser()
+config.read("../config.ini")
+SAMPLES = config.getint("parameters", "SAMPLES")
+CHAINS = config.getint("parameters", "CHAINS")
+PREDICTIVE_SAMPLES = config.getint("parameters", "PREDICTIVE_SAMPLES")
+CI = config.getfloat("parameters", "CREDIBLE_INTERVAL")
+FS = config.getint("parameters", "FONT_SIZE")
 CHERRY_BLOSSOM_PINK = (1, 183 / 255, 197 / 255)
 
 # Add database location to the path and import.
@@ -117,7 +120,9 @@ ax[2].fill_between(
     blossom_data["year"], low, high, alpha=0.25, color=CHERRY_BLOSSOM_PINK
 )
 ax[2].plot(
-    blossom_data["year"], post_pc_m_4_7["D"].mean(axis=0), color=CHERRY_BLOSSOM_PINK
+    blossom_data["year"],
+    post_pc_m_4_7["D"].mean(axis=0),
+    color=CHERRY_BLOSSOM_PINK,
 )
 ax[2].set_xlabel("Year", fontsize=FS)
 ax[2].set_ylabel("Day of Year", fontsize=FS)
