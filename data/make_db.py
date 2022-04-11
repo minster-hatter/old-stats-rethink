@@ -13,7 +13,7 @@ cnxn = connect("stats_rethink.db")
 # waffle_divorce = read_csv("WaffleDivorce.csv", delimiter=";")
 # waffle_divorce.to_sql("waffles", cnxn, if_exists="fail", index=False)
 
-#milk = read_csv("milk.csv")
+#milk = read_csv("milk.csv", delimiter=";")
 #milk.to_sql("milk", cnxn, if_exists="fail", index=False)
 
 # Not quite correct.
