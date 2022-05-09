@@ -1,5 +1,5 @@
-from pathlib import Path
 from configparser import ConfigParser
+from pathlib import Path
 from sqlite3 import connect
 
 from pandas import read_sql
