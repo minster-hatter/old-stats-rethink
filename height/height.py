@@ -11,6 +11,7 @@ from pymc3 import (
     sample,
     sample_posterior_predictive,
     model_to_graphviz,
+    Deterministic,
 )
 from arviz import (
     from_pymc3,
@@ -279,3 +280,29 @@ ax.scatter(xs, ordered_heights, marker="x", color="black")
 ax.set_xlabel("weight (kg)")
 ax.set_ylabel("height (cm)")
 savefig("m_4_3_prediction_error.png")
+
+# Model which compares sex.
+sex = howell_data["male"].values
+
+with Model() as m_5_8:
+    """h_i ~ Normal(mu_i, sigma)
+    mu_i = alpha_sex_i
+    alpha_j ~ Normal(178, 20), for j = 1, 2
+    sigma ~ Uniform(0, 50)
+    """
+    # Priors.
+    mu = Normal("mu", 178.0, 20.0, shape=2)
+    sigma = Uniform("sigma", 0.0, 50.0)
+    # Likelihood.
+    h = Normal("h", mu[sex], sigma, observed=howell_data["height"])
+    # Deterministic functions.
+    delta = Deterministic("delta", mu[0] - mu[1])
+    # Sample
+    trace_m_5_8 = sample(SAMPLES, chains=CHAINS)
+    idata_m_5_8 = from_pymc3(trace_m_5_8, model=m_4_3)
+
+model_to_graphviz(m_5_8).render("m_5_8_dag", cleanup=True, format="png")
+
+summary(idata_m_5_8, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_5_8_summary.csv"
+)
