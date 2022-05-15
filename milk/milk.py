@@ -2,7 +2,7 @@ from configparser import ConfigParser
 from pathlib import Path
 from sqlite3 import connect
 
-from pandas import read_sql
+from pandas import read_sql, Categorical
 from sklearn.preprocessing import scale
 from numpy import nan, log10, median
 from pymc3 import (
@@ -77,9 +77,7 @@ with Model() as m_5_5:
     )
 model_to_graphviz(m_5_5).render("m_5_5_dag", cleanup=True, format="png")
 
-summary(idata_m_5_5, hdi_prob=CI, stat_funcs=[median]).to_csv(
-    "m_5_5_summary.csv"
-)
+summary(idata_m_5_5, hdi_prob=CI, stat_funcs=[median]).to_csv("m_5_5_summary.csv")
 
 plot_ppc(
     idata_m_5_5,
@@ -133,9 +131,7 @@ with Model() as m_5_6:
 
 model_to_graphviz(m_5_6).render("m_5_6_dag", cleanup=True, format="png")
 
-summary(idata_m_5_6, hdi_prob=CI, stat_funcs=[median]).to_csv(
-    "m_5_6_summary.csv"
-)
+summary(idata_m_5_6, hdi_prob=CI, stat_funcs=[median]).to_csv("m_5_6_summary.csv")
 
 plot_ppc(
     idata_m_5_6,
@@ -194,9 +190,7 @@ with Model() as m_5_7:
 
 model_to_graphviz(m_5_7).render("m_5_7_dag", cleanup=True, format="png")
 
-summary(idata_m_5_7, hdi_prob=CI, stat_funcs=[median]).to_csv(
-    "m_5_7_summary.csv"
-)
+summary(idata_m_5_7, hdi_prob=CI, stat_funcs=[median]).to_csv("m_5_7_summary.csv")
 
 plot_ppc(
     idata_m_5_7,
@@ -206,9 +200,7 @@ plot_ppc(
 )
 savefig("m_5_7_posterior_pc.png")
 
-plot_trace(
-    idata_m_5_7, compact=True, var_names=["alpha", "beta_M", "beta_N", "sigma"]
-)
+plot_trace(idata_m_5_7, compact=True, var_names=["alpha", "beta_M", "beta_N", "sigma"])
 savefig("m_5_7_traces.png")
 
 plot_posterior(
@@ -221,9 +213,7 @@ plot_posterior(
 )
 savefig("m_5_7_posterior_hisograms")
 
-plot_pair(
-    idata_m_5_7, var_names=["alpha", "beta_M", "beta_N", "sigma"], kind="kde"
-)
+plot_pair(idata_m_5_7, var_names=["alpha", "beta_M", "beta_N", "sigma"], kind="kde")
 savefig("m_5_7_pairplot_alpha_beta_M_sigma.png")
 
 # Compare the model parameters (c.f. DAG conditional indepencies).
@@ -240,16 +230,12 @@ savefig("forest_plot_beta_M_beta_N.png")
 # Using DAGs to explain the forest plot.
 # Directed acyclic graphs.
 dag_0 = DAG([("M", "N"), ("M", "K"), ("N", "K")])
-dag_0_plot = dag_0.to_daft(
-    node_pos="circular", pgm_params={"observed_style": "inner"}
-)
+dag_0_plot = dag_0.to_daft(node_pos="circular", pgm_params={"observed_style": "inner"})
 dag_0_plot.render()
 dag_0_plot.savefig("milk_dag_0.png")
 
 dag_1 = DAG([("N", "M"), ("M", "K"), ("N", "K")])
-dag_1_plot = dag_1.to_daft(
-    node_pos="circular", pgm_params={"observed_style": "inner"}
-)
+dag_1_plot = dag_1.to_daft(node_pos="circular", pgm_params={"observed_style": "inner"})
 dag_1_plot.render()
 dag_1_plot.savefig("milk_dag_1.png")
 
@@ -257,20 +243,40 @@ dag_2 = DAG([("M", "K"), ("N", "K")])
 dag_2.add_node("U", latent=True)
 dag_2.add_edge("U", "M")
 dag_2.add_edge("U", "N")
-dag_2_plot = dag_2.to_daft(
-    node_pos="circular", pgm_params={"observed_style": "inner"}
-)
+dag_2_plot = dag_2.to_daft(node_pos="circular", pgm_params={"observed_style": "inner"})
 dag_2_plot.render()
 dag_2_plot.savefig("milk_dag_2.png")
 
 # These are a Markov equivalent set (same conditional independencies in each.)
 with open("milk_conditional_independencies.txt", "w") as output:
-    output.write(
-        f"DAG_0 conditional independencies:\n{dag_0.get_independencies()}\n"
+    output.write(f"DAG_0 conditional independencies:\n{dag_0.get_independencies()}\n")
+    output.write(f"DAG_1 conditional independencies:\n{dag_1.get_independencies()}\n")
+    output.write(f"DAG_2 conditional independencies:\n{dag_2.get_independencies()}")
+
+# Multiple categories model of milk energy w. r. t. clade.
+clean_milk_data["clade_id"] = Categorical(clean_milk_data["clade"]).codes
+
+with Model() as m_5_9:
+    # Priors.
+    mu = Normal("mu", 0.0, 0.5, shape=clean_milk_data["clade_id"].max() + 1)
+    sigma = Exponential("sigma", 1.0)
+    # Likelihood.
+    K = Normal(
+        "K", mu[clean_milk_data["clade_id"]], sigma, observed=clean_milk_data["K"]
     )
-    output.write(
-        f"DAG_1 conditional independencies:\n{dag_1.get_independencies()}\n"
-    )
-    output.write(
-        f"DAG_2 conditional independencies:\n{dag_2.get_independencies()}"
-    )
+    # Sample and extract.
+    trace_m_5_9 = sample(SAMPLES, chains=CHAINS)
+    idata_m_5_9 = from_pymc3(trace_m_5_9, model=m_5_9)
+
+model_to_graphviz(m_5_9).render("m_5_9_dag", cleanup=True, format="png")
+
+summary(idata_m_5_9, hdi_prob=CI, stat_funcs=[median]).to_csv("m_5_9_summary.csv")
+
+plot_forest(
+    idata_m_5_9,
+    var_names=["mu"],
+    combined=True,
+    hdi_prob=CI,
+    colors="black",
+)
+savefig("m_5_9_forest_plot.png")
