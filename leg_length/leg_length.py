@@ -119,3 +119,60 @@ plot_forest(
 savefig("m_6_1_forest_plot.png")
 
 # A linear model using only the left leg length.
+with Model() as m_6_2:
+    # Priors.
+    alpha = Normal("alpha", 10.0, 100.0)
+    beta_left = Normal("beta_left", 2, 10)
+    sigma = Exponential("sigma", 1.0)
+    # Likelihood.
+    mu = alpha + beta_left * length_data["left_leg_length"]
+    height = Normal("height", mu, sigma, observed=length_data["height"])
+    # Sample and extract.
+    prior_pc_m_6_2 = sample_prior_predictive()
+    trace_m_6_2 = sample(SAMPLES, chains=CHAINS)
+    post_pc_m_6_2 = sample_posterior_predictive(trace_m_6_2)
+    idata_m_6_2 = from_pymc3(
+        trace_m_6_2,
+        prior=prior_pc_m_6_2,
+        posterior_predictive=post_pc_m_6_2,
+        model=m_6_2,
+    )
+
+model_to_graphviz(m_6_2).render("m_6_2_dag", cleanup=True, format="png")
+
+# Note the similarity of beta_left from 6.2 and the sum of betas from 6.1.
+summary(idata_m_6_2, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_6_2_summary.csv"
+)
+
+plot_ppc(
+    idata_m_6_2,
+    num_pp_samples=PREDICTIVE_SAMPLES,
+    mean=False,
+    kind="cumulative",
+)
+savefig("m_6_2_posterior_pc.png")
+
+plot_trace(
+    idata_m_6_2,
+    compact=True,
+    var_names=["alpha", "beta_left", "sigma"],
+)
+savefig("m_6_2_traces.png")
+
+plot_posterior(
+    idata_m_6_2,
+    hdi_prob=CI,
+    var_names=["alpha", "beta_left", "sigma"],
+    kind="hist",
+    color="orangered",
+    point_estimate="median",
+)
+savefig("m_6_2_posterior_hisograms")
+
+plot_pair(
+    idata_m_6_2,
+    var_names=["alpha", "beta_left", "sigma"],
+    kind="kde",
+)
+savefig("m_6_2_pairplot_alpha_beta_left_sigma.png")
