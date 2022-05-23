@@ -46,6 +46,8 @@ milk_data["K"] = scale(milk_data["kcal.per.g"])
 milk_data["N"] = scale(milk_data["neocortex.perc"])
 log_mass = log10(milk_data["mass"])
 milk_data["M"] = scale(log_mass)
+milk_data["F"] = scale(milk_data["perc.fat"])
+milk_data["L"] = scale(milk_data["perc.lactose"])
 print(milk_data.describe())
 # Remove NAs to allow m_5_5 to run.
 clean_milk_data = milk_data.dropna().copy()
@@ -344,4 +346,79 @@ model_to_graphviz(m_5_10).render("m_5_10_dag", cleanup=True, format="png")
 
 summary(idata_m_5_10, hdi_prob=CI, stat_funcs=[median]).to_csv(
     "m_5_10_summary.csv"
+)
+
+with Model() as m_6_3:
+    """K_i ~ Normal(mu_i, sigma)
+    mu <- alpha + beta * F_i
+    alpha ~ Normal(0, 0.2)
+    beta ~ Normal(0, 0.5)
+    sigma ~ Exponential(1)
+    """
+    # Priors.
+    alpha = Normal("alpha", 0.0, 0.2)
+    beta = Normal("beta", 0.0, 0.5)
+    sigma = Exponential("sigma", 1.0)
+    # Likelihood.
+    mu = alpha + beta * clean_milk_data["F"]
+    K = Normal("K", mu, sigma, observed=clean_milk_data["K"])
+    # Sample and extract.
+    trace_m_6_3 = sample(SAMPLES, chains=CHAINS)
+    idata_m_6_3 = from_pymc3(trace_m_6_3, model=m_6_3)
+
+model_to_graphviz(m_6_3).render("m_6_3_dag", cleanup=True, format="png")
+
+summary(idata_m_6_3, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_6_3_summary.csv"
+)
+
+with Model() as m_6_4:
+    """K_i ~ Normal(mu_i, sigma)
+    mu <- alpha + beta * L_i
+    alpha ~ Normal(0, 0.2)
+    beta ~ Normal(0, 0.5)
+    sigma ~ Exponential(1)
+    """
+    # Priors.
+    alpha = Normal("alpha", 0.0, 0.2)
+    beta = Normal("beta", 0.0, 0.5)
+    sigma = Exponential("sigma", 1.0)
+    # Likelihood.
+    mu = alpha + beta * clean_milk_data["L"]
+    K = Normal("K", mu, sigma, observed=clean_milk_data["K"])
+    # Sample and extract.
+    trace_m_6_4 = sample(SAMPLES, chains=CHAINS)
+    idata_m_6_4 = from_pymc3(trace_m_6_4, model=m_6_4)
+
+model_to_graphviz(m_6_4).render("m_6_4_dag", cleanup=True, format="png")
+
+summary(idata_m_6_4, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_6_4_summary.csv"
+)
+
+with Model() as m_6_5:
+    """K_i ~ Normal(mu_i, sigma)
+    mu <- alpha + beta_F * F_i + beta_L * L_i
+    alpha ~ Normal(0, 0.2)
+    beta_F ~ Normal(0, 0.5)
+    beta_L ~ Normal(0, 0.5)
+    sigma ~ Exponential(1)
+    """
+    # Priors.
+    alpha = Normal("alpha", 0.0, 0.2)
+    beta_F = Normal("beta_F", 0.0, 0.5)
+    beta_L = Normal("beta_L", 0.0, 0.5)
+    sigma = Exponential("sigma", 1.0)
+    # Likelihood.
+    mu = alpha + beta_F * clean_milk_data["F"] + beta_L * clean_milk_data["L"]
+    K = Normal("K", mu, sigma, observed=clean_milk_data["K"])
+    # Sample and extract.
+    trace_m_6_5 = sample(SAMPLES, chains=CHAINS)
+    idata_m_6_5 = from_pymc3(trace_m_6_5, model=m_6_5)
+
+model_to_graphviz(m_6_5).render("m_6_5_dag", cleanup=True, format="png")
+
+# Note that the two predictors are non-identifiable.
+summary(idata_m_6_5, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_6_5_summary.csv"
 )
