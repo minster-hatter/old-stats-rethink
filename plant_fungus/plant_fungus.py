@@ -25,6 +25,7 @@ CHAINS = config.getint("parameters", "CHAINS")
 PREDICTIVE_SAMPLES = config.getint("parameters", "PREDICTIVE_SAMPLES")
 CI = config.getfloat("parameters", "CREDIBLE_INTERVAL")
 
+# Create the data.
 N = 100
 h_0 = normal(10, 2, N)
 treatment = repeat([0, 1], N / 2)
@@ -117,7 +118,6 @@ with Model() as m_6_7:
     p = alpha + beta_T * plant_data["treatment"] + beta_F * plant_data["fungus"]
     mu = p * plant_data["h_0"]
     h_1 = Normal("h_1", mu, sigma, observed=plant_data["h_1"])
-
     # Inference and extract.
     prior_pc_m_6_7 = sample_prior_predictive()
     trace_m_6_7 = sample(SAMPLES, chains=CHAINS)
@@ -166,3 +166,69 @@ plot_posterior(
     point_estimate="median",
 )
 savefig("m_6_7_posterior_hisograms")
+
+# Make a model with only the treatment as the predictor.
+with Model() as m_6_8:
+    """h_{1, i} ~ Normal(mu_i, sigma)
+    mu_i = h_{0, i} * p
+    p = alpha + beta_T * T_i
+    alpha ~ Log-Normal(0, 0.25)
+    beta_T ~ Normal(0, 0.5)
+    sigma ~ Exponential(1)
+    """
+    # Priors.
+    alpha = Lognormal("alpha", 0.0, 0.2)
+    beta_T = Normal("beta_T", 0.0, 0.5)
+    sigma = Exponential("sigma", 1.0)
+    # Likelihood.
+    p = alpha + beta_T * plant_data["treatment"]
+    mu = p * plant_data["h_0"]
+    h_1 = Normal("h_1", mu, sigma, observed=plant_data["h_1"])
+    # Inference and extract.
+    prior_pc_m_6_8 = sample_prior_predictive()
+    trace_m_6_8 = sample(SAMPLES, chains=CHAINS)
+    posterior_pc_m_6_8 = sample_posterior_predictive(trace_m_6_8)
+    idata_m_6_8 = from_pymc3(
+        trace_m_6_8,
+        prior=prior_pc_m_6_8,
+        posterior_predictive=posterior_pc_m_6_8,
+        model=m_6_8,
+    )
+
+M_6_8_VARIABLES = ["beta_T", "sigma"]
+
+model_to_graphviz(m_6_8).render("m_6_8_dag", cleanup=True, format="png")
+
+summary(idata_m_6_8, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_6_8_summary.csv"
+)
+
+plot_ppc(
+    idata_m_6_8,
+    num_pp_samples=PREDICTIVE_SAMPLES,
+    mean=False,
+    kind="cumulative",
+    group="prior",
+)
+savefig("m_6_8_prior_pc.png")
+
+plot_ppc(
+    idata_m_6_8,
+    num_pp_samples=PREDICTIVE_SAMPLES,
+    mean=False,
+    kind="cumulative",
+)
+savefig("m_6_8_posterior_pc.png")
+
+plot_trace(idata_m_6_8, compact=True, var_names=M_6_8_VARIABLES)
+savefig("m_6_8_traces.png")
+
+plot_posterior(
+    idata_m_6_8,
+    hdi_prob=CI,
+    var_names=M_6_8_VARIABLES,
+    kind="hist",
+    color="orangered",
+    point_estimate="median",
+)
+savefig("m_6_8_posterior_hisograms")
