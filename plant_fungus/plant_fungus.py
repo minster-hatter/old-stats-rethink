@@ -245,3 +245,30 @@ with open("plant_fungus_conditional_independencies.txt", "w") as output:
     output.write(
         f"plang_dag conditional independencies:\n{plant_dag.get_independencies()}\n"
     )
+
+# Moisture latent variable model.
+moisture_dag = DAG([("H0", "H1"), ("T", "F")])
+moisture_dag.add_node("(m)", latent=True)
+moisture_dag.add_edge("(m)", "F")
+moisture_dag.add_edge("(m)", "H1")
+moisture_dag_plot = moisture_dag.to_daft(
+    node_pos="circular", pgm_params={"observed_style": "inner"}
+)
+moisture_dag_plot.render()
+moisture_dag_plot.savefig("moisture_dag.png")
+with open("moisture_dag_conditional_independencies.txt", "w") as output:
+    output.write(
+        f"moisture_dag conditional independencies:\n{moisture_dag.get_independencies()}\n"
+    )
+moisture = binomial(1, 0.5, size=N)
+moisture_fungus = binomial(1, 0.5 - treatment * 0.4 + 0.4 * moisture, size=N)
+moisture_h_1 = h_0 + normal(5 + 3 * moisture, size=N)
+moisture_data = DataFrame.from_dict(
+    {
+        "h0": h_0,
+        "h1": moisture_h_1,
+        "treatment": treatment,
+        "fungus": moisture_fungus,
+    }
+)
+print(moisture_data.head())
