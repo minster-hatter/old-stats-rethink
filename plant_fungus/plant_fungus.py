@@ -16,6 +16,7 @@ from pymc3 import (
     Deterministic,
 )
 from matplotlib.pyplot import savefig
+from pgmpy.base import DAG
 
 # Constants to be used later.
 config = ConfigParser()
@@ -232,3 +233,15 @@ plot_posterior(
     point_estimate="median",
 )
 savefig("m_6_8_posterior_hisograms")
+
+# DAGs to understand the models.
+plant_dag = DAG([("H0", "H1"), ("F", "H1"), ("T", "F")])
+plant_dag_plot = plant_dag.to_daft(
+    node_pos="circular", pgm_params={"observed_style": "inner"}
+)
+plant_dag_plot.render()
+plant_dag_plot.savefig("plant_dag.png")
+with open("plant_fungus_conditional_independencies.txt", "w") as output:
+    output.write(
+        f"plang_dag conditional independencies:\n{plant_dag.get_independencies()}\n"
+    )
