@@ -4,7 +4,7 @@ from numpy import exp, zeros, repeat, arange, linspace, array, median
 from numpy.random import seed, binomial
 from pandas import DataFrame, Categorical
 from arviz import summary, from_pymc3
-from pymc3 import Model, Normal, Exponential, sample
+from pymc3 import Model, Normal, Exponential, sample, model_to_graphviz
 from pgmpy.base import DAG
 from pgmpy.models import BayesianNetwork
 from pgmpy.inference import CausalInference
@@ -67,7 +67,7 @@ with Model() as m_6_9:
     """H_i ~ Normal(mu_i, sigma)
     mu_i = alpha_m[i] + beta_A * A_i
     alpha_m[j] ~ Normal(0, 1)
-    beta_A ~ Normal(, 2)
+    beta_A ~ Normal(0, 2)
     sigma ~ Exponential(1)
     """
     # Priors.
@@ -81,11 +81,36 @@ with Model() as m_6_9:
     m_6_9_trace = sample(SAMPLES, chains=CHAINS)
     idata_m_6_9 = from_pymc3(m_6_9_trace, model=m_6_9)
 
+model_to_graphviz(m_6_9).render("m_6_9_dag", cleanup=True, format="png")
+
 summary(idata_m_6_9, hdi_prob=CI, stat_funcs=[median]).to_csv(
     "m_6_9_summary.csv"
 )
 
 # A model without marriage status shows (correctly) no relationship.
+with Model() as m_6_10:
+    """H_i ~ Normal(mu_i, sigma)
+    mu_i = alpha + beta_A * A_i
+    alpha ~ Normal(0, 1)
+    beta_A ~ Normal(0, 2)
+    sigma ~ Exponential(1)
+    """
+    # Priors.
+    alpha = Normal("alpha", 0.0, 1.0)
+    beta_A = Normal("beta_A", 0.0, 2.0)
+    sigma = Exponential("sigma", 1.0)
+    # Likelihood.
+    mu = alpha + beta_A * adults["A"]
+    happiness = Normal("H", mu, sigma, observed=adults["happiness"])
+    # Sample
+    m_6_10_trace = sample(SAMPLES, chains=CHAINS)
+    idata_m_6_10 = from_pymc3(m_6_10_trace, model=m_6_10)
+
+model_to_graphviz(m_6_10).render("m_6_10_dag", cleanup=True, format="png")
+
+summary(idata_m_6_10, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_6_10_summary.csv"
+)
 
 # DAG and implications.
 dag = DAG([("H", "M"), ("A", "M")])
