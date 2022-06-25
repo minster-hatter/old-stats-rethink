@@ -1,9 +1,13 @@
 from configparser import ConfigParser
 
-from numpy import exp, zeros, repeat, arange, linspace, array
+from numpy import exp, zeros, repeat, arange, linspace, array, median
 from numpy.random import seed, binomial
-from pandas import DataFrame
-from arviz import summary
+from pandas import DataFrame, Categorical
+from arviz import summary, from_pymc3
+from pymc3 import Model, Normal, Exponential, sample
+from pgmpy.base import DAG
+from pgmpy.models import BayesianNetwork
+from pgmpy.inference import CausalInference
 
 # Constants to be used later.
 config = ConfigParser()
@@ -48,4 +52,56 @@ population = sim_happiness()
 population_summary = population.copy()
 # Make booleans into integers for arviz.
 population_summary["married"] = population_summary["married"].astype(int)
-print(summary(population_summary.to_dict(orient="list"), kind="stats", hdi_prob=CI))
+summary(
+    population_summary.to_dict(orient="list"), kind="stats", hdi_prob=CI
+).to_csv("population_summary.csv")
+
+# Focus only on adults and rescale age 18 to 65 as 0 to 1.
+adults = population.loc[population.age >= 18]
+adults.loc[:, "A"] = (adults["age"].copy() - 18) / (65 - 18)
+
+married_id = Categorical(adults.loc[:, "married"].astype(int))
+
+# Model happiness as a function age and married.
+with Model() as m_6_9:
+    """H_i ~ Normal(mu_i, sigma)
+    mu_i = alpha_m[i] + beta_A * A_i
+    alpha_m[j] ~ Normal(0, 1)
+    beta_A ~ Normal(, 2)
+    sigma ~ Exponential(1)
+    """
+    # Priors.
+    alpha_m = Normal("alpha_m", 0.0, 1.0, shape=2)
+    beta_A = Normal("beta_A", 0.0, 2.0)
+    sigma = Exponential("sigma", 1.0)
+    # Likelihood.
+    mu = alpha_m[married_id] + beta_A * adults["A"]
+    happiness = Normal("H", mu, sigma, observed=adults["happiness"])
+    # Sample
+    m_6_9_trace = sample(SAMPLES, chains=CHAINS)
+    idata_m_6_9 = from_pymc3(m_6_9_trace, model=m_6_9)
+
+summary(idata_m_6_9, hdi_prob=CI, stat_funcs=[median]).to_csv(
+    "m_6_9_summary.csv"
+)
+
+# A model without marriage status shows (correctly) no relationship.
+
+# DAG and implications.
+dag = DAG([("H", "M"), ("A", "M")])
+dag_plot = dag.to_daft(
+    node_pos="circular", pgm_params={"observed_style": "inner"}
+)
+dag_plot.render()
+dag_plot.savefig("marry_dag.png")
+
+with open("marriage_conditional_independencies.txt", "w") as output:
+    output.write(
+        f"marriage DAG conditional independencies:\n{dag.get_independencies()}\n"
+    )
+
+bn = BayesianNetwork(dag)
+inference = CausalInference(bn)
+with open("marriage_AH_adjustment.txt", "w") as output:
+    output.write("AH adjustment set:\n")
+    output.write(str(inference.get_minimal_adjustment_set("A", "H")))
