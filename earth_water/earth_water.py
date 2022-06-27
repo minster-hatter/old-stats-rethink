@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 
-from pymc3 import (
+from pymc import (
     Model,
     Uniform,
     Binomial,
@@ -36,23 +36,20 @@ with Model() as m_2_6:
     prior_pc = sample_prior_predictive()
     trace = sample(draws=SAMPLES, chains=CHAINS)
     post_pc = sample_posterior_predictive(trace)
-    idata = from_pymc3(
-        trace, prior=prior_pc, posterior_predictive=post_pc, model=m_2_6
-    )
 
 # Output summary and plots.
-summary(idata, hdi_prob=CI, stat_funcs=[median]).to_csv("m_2_6_summary.csv")
+summary(trace, hdi_prob=CI, stat_funcs=[median]).to_csv("m_2_6_summary.csv")
 
-plot_ppc(idata, num_pp_samples=PREDICTIVE_SAMPLES, mean=False, group="prior")
+plot_ppc(prior_pc, num_pp_samples=PREDICTIVE_SAMPLES, mean=False, group="prior")
 savefig("m_2_6_prior_pc.png")
 
-plot_ppc(idata, num_pp_samples=PREDICTIVE_SAMPLES, mean=False)
+plot_ppc(post_pc, num_pp_samples=PREDICTIVE_SAMPLES, mean=False)
 savefig("m_2_6_posterior_pc.png")
 
-plot_trace(idata, compact=True)
+plot_trace(trace, compact=True)
 savefig("m_2_6_traces.png")
 
-plot_posterior(idata, var_names=["p"], hdi_prob=CI, point_estimate="median")
+plot_posterior(trace, var_names=["p"], hdi_prob=CI, point_estimate="median")
 savefig("m_2_6_posterior_p.png")
 
 model_to_graphviz(m_2_6).render("m_2_6_dag", cleanup=True, format="png")
